@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COSMO PLUS</title>
+<style>
+:root{--g:#0f0;--d:#060;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;background:#050505;color:var(--g);
+font-family:Consolas,monospace;overflow:hidden;
+height:100vh;display:flex;flex-direction:column;}
+header{height:52px;display:flex;align-items:center;
+justify-content:space-between;padding:0 8px;
+border-bottom:1px solid var(--d);background:#001100;
+flex-shrink:0;z-index:50;}
+.hleft{display:flex;align-items:center;gap:6px;}
+.logo{font-weight:bold;font-size:13px;
+text-shadow:0 0 5px var(--g);}
+.menu{background:transparent;border:1px solid var(--d);
+color:var(--g);font-size:16px;line-height:1;
+padding:6px 10px;cursor:pointer;font-family:inherit;}
+.tabs{display:flex;gap:8px;}
+.btn{min-width:86px;padding:12px 6px;background:transparent;
+border:1px solid var(--d);color:var(--d);
+font-family:inherit;font-size:13px;cursor:pointer;}
+.btn.active{background:var(--g);color:#000;
+border-color:var(--g);box-shadow:0 0 8px var(--g);}
+#menu-panel{position:fixed;top:56px;left:8px;z-index:200;
+display:none;background:#000;border:1px solid var(--g);
+padding:8px;max-width:70vw;}
+#menu-panel.show{display:block;}
+.mi{display:block;width:100%;text-align:left;
+background:transparent;border:none;
+border-bottom:1px dashed #030;color:var(--g);
+font-family:inherit;font-size:13px;padding:8px 6px;
+cursor:pointer;}
+.mi:last-child{border-bottom:none;}
+#info-panel{position:fixed;top:56px;left:8px;right:8px;
+bottom:8px;z-index:300;display:none;background:#000;
+border:1px solid var(--g);padding:12px;
+overflow-y:auto;-webkit-overflow-scrolling:touch;}
+#info-panel.show{display:block;}
+#info-close{margin-top:10px;background:transparent;
+border:1px solid var(--g);color:var(--g);
+font-family:inherit;padding:8px 14px;cursor:pointer;}
+main{flex:1;position:relative;overflow:hidden;}
+.view{position:absolute;top:0;left:0;width:100%;
+height:100%;display:none;flex-direction:column;}
+.view.active{display:flex;}
+#out{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+touch-action:pan-y;padding:10px;font-size:13px;
+line-height:1.4;word-break:break-word;}
+#in-wrap{display:flex;align-items:center;padding:8px 10px;
+border-top:1px solid var(--d);background:#000;flex-shrink:0;}
+#prompt{color:var(--g);margin-right:8px;font-weight:bold;}
+#cmd{flex:1;background:transparent;border:none;outline:none;
+color:#fff;font-family:inherit;font-size:16px;}
+#b-send{background:transparent;border:1px solid var(--d);
+color:var(--g);font-size:16px;padding:6px 12px;
+cursor:pointer;font-family:inherit;}
+canvas{width:100%;height:100%;display:block;
+touch-action:none;}
+#body-tabs{position:absolute;top:8px;left:8px;z-index:6;
+display:flex;gap:6px;}
+.bbtn{padding:8px 12px;background:rgba(0,0,0,.7);
+border:1px solid var(--d);color:var(--d);
+font-family:inherit;font-size:12px;cursor:pointer;}
+.bbtn.active{background:var(--g);color:#000;
+border-color:var(--g);}
+#legend{position:absolute;bottom:8px;left:8px;
+border:1px solid var(--d);background:rgba(0,0,0,.8);
+padding:6px;font-size:10px;pointer-events:none;}
+#tag{position:absolute;display:none;background:#000;
+border:1px solid var(--g);padding:3px 6px;font-size:11px;
+color:var(--g);z-index:5;}
+#tag-dot{background:transparent;border:none;color:var(--g);
+font-size:14px;padding:0 4px;cursor:pointer;
+font-family:inherit;}
+.l-info{color:#888;}
+.l-ok{color:#0f0;}
+.l-err{color:#f33;}
+.l-data{color:#0cf;}
+.l-cmd{color:#fff;}
+</style>
+</head>
+<body>
+<header>
+<div class="hleft">
+<div class="logo">SYS://COSMO_PLUS</div>
+<button class="menu" id="menu-btn">⋮</button>
+</div>
+<div class="tabs">
+<button class="btn active" id="b-term">TERMINAL</button>
+<button class="btn" id="b-globe">GLOBE</button>
+</div>
+</header>
+<div id="menu-panel">
+<button class="mi" data-c="about">ABOUT</button>
+<button class="mi" data-c="tracklast">TRACK: LAST TAP</button>
+<button class="mi" data-c="trackall">TRACK: ALL</button>
+<button class="mi" data-c="tracktop">TRACK: TOP-5</button>
+<button class="mi" data-c="untrack">TRACK: OFF</button>
+<button class="mi" data-c="filter com">FILTER: COMMS</button>
+<button class="mi" data-c="filter nav">FILTER: NAV</button>
+<button class="mi" data-c="filter eo">FILTER: EARTH OBS</button>
+<button class="mi" data-c="filter off">FILTER: OFF</button>
+<button class="mi" data-c="stream on">STREAM ON</button>
+<button class="mi" data-c="stream off">STREAM OFF</button>
+<button class="mi" data-c="clear">CLEAR</button>
+</div>
+<div id="info-panel">
+<div id="info-body"></div>
+<button id="info-close">CLOSE ✕</button>
+</div>
+<!-- P1 END -->
+<main>
+<div id="v-term" class="view active">
+<div id="out"></div>
+<div id="in-wrap">
+<span id="prompt">&gt;</span>
+<input type="text" id="cmd" enterkeyhint="send"
+autocomplete="off" autocapitalize="off" spellcheck="false"
+placeholder="type 'help'...">
+<button id="b-send">➤</button>
+</div>
+</div>
+<div id="v-globe" class="view">
+<canvas id="c2d"></canvas>
+<div id="body-tabs">
+<button class="bbtn active" data-b="E">EARTH</button>
+<button class="bbtn" data-b="M">MOON</button>
+<button class="bbtn" data-b="A">MARS</button>
+</div>
+<div id="tag"><span id="tag-name"></span>
+<button id="tag-dot">⋮</button></div>
+<div id="legend">
+<div style="color:#0f0">● Stations/Science</div>
+<div style="color:#08f">● Earth Observation</div>
+<div style="color:#0ff">● Comms constellations</div>
+<div style="color:#fa0">● Weather GEO</div>
+<div style="color:#ff0">● Navigation</div>
+<div style="color:#a0f">● Deep space</div>
+<div style="color:#fff">● Surface rovers/landers</div>
+<div>Drag=rotate Pinch=zoom Tap=info</div>
+</div>
+</div>
+</main>
+<script>
+window.onerror=function(m,s,l){
+var o=document.getElementById('out');
+if(o){
+var d=document.createElement('div');
+d.style.color='#f33';
+d.textContent='JS ERROR: '+m+' line '+l;
+o.appendChild(d);
+}
+return false;
+};
+function $(id){ return document.getElementById(id); }
+var out=$('out'), inp=$('cmd');
+var atBottom=true;
+out.addEventListener('scroll',function(){
+atBottom=(out.scrollTop+out.clientHeight)>=
+(out.scrollHeight-24);
+});
+function log(t,c){
+var d=document.createElement('div');
+d.className='l-'+(c||'info');
+d.textContent=t;
+out.appendChild(d);
+if(atBottom) out.scrollTop=out.scrollHeight;
+while(out.children.length>200){
+out.removeChild(out.firstChild);
+}
+}
+function fit(){
+var h=window.innerHeight;
+try{
+if(window.visualViewport){
+h=window.visualViewport.height;
+}
+}catch(e){}
+document.body.style.height=h+'px';
+window.scrollTo(0,0);
+}
+if(window.visualViewport){
+visualViewport.addEventListener('resize',fit);
+}
+window.addEventListener('resize',fit);
+fit();
+function exec(raw){
+if(typeof run==='function') run(raw);
+else log('ENGINE MISSING: '+raw,'err');
+}
+$('b-send').addEventListener('click',function(){
+exec(inp.value); inp.value=''; inp.focus();
+});
+inp.addEventListener('keydown',function(e){
+if(e.key==='Enter'){ exec(inp.value); inp.value=''; }
+});
+$('in-wrap').addEventListener('click',function(){
+inp.focus();
+});
+function switchTab(t){
+var vt=$('v-term'), vg=$('v-globe');
+var bt=$('b-term'), bg=$('b-globe');
+if(t==='term'){
+vt.classList.add('active');
+vg.classList.remove('active');
+bt.classList.add('active');
+bg.classList.remove('active');
+setTimeout(fit,50);
+}else{
+if(typeof initGlobe!=='function'){
+log('GLOBE BLOCK MISSING','err'); return;
+}
+if(!initGlobe()){
+log('Globe unavailable','err'); return;
+}
+vg.classList.add('active');
+vt.classList.remove('active');
+bg.classList.add('active');
+bt.classList.remove('active');
+setTimeout(fit,50);
+}
+}
+$('b-term').addEventListener('click',function(){
+switchTab('term');
+});
+$('b-globe').addEventListener('click',function(){
+switchTab('globe');
+});
+$('menu-btn').addEventListener('click',function(e){
+e.stopPropagation();
+$('menu-panel').classList.toggle('show');
+});
+document.addEventListener('click',function(e){
+var id=e.target.id;
+if(id!=='menu-btn'&&id!=='menu-panel'){
+$('menu-panel').classList.remove('show');
+}
+});
+var mis=document.querySelectorAll('.mi');
+Array.prototype.forEach.call(mis,function(b){
+b.addEventListener('click',function(e){
+e.stopPropagation();
+$('menu-panel').classList.remove('show');
+exec(b.getAttribute('data-c'));
+});
+});
+$('info-close').addEventListener('click',function(){
+$('info-panel').classList.remove('show');
+});
+$('tag-dot').addEventListener('click',function(e){
+e.stopPropagation();
+if(typeof openInfo==='function'&&
+typeof lastTap!=='undefined'&&lastTap){
+openInfo(lastTap);
+}
+});
+log('CORE A OK','ok');
+</script>
+<!-- P2 END -->
+<script>
+var ABOUT_TEXT=
+'Создано ПСТ с ии qwen 3.8max +7 995 604 78 14';
+var F={};
+F['25544']='1998-11-20|NASA/Roscosmos/ESA|'+
+'419725 kg|109x73 m|crewed orbital lab';
+F['48274']='2021-04-29|CMSA China|'+
+'100000 kg|37 m|crewed station Tiangong';
+F['20580']='1990-04-24|NASA/ESA|'+
+'11110 kg|13.2x4.2 m|optical/UV telescope';
+F['43435']='2018-04-18|NASA|'+
+'362 kg|3.9x1.2 m|exoplanet transit survey';
+F['25994']='1999-12-18|NASA|'+
+'5190 kg|6.8 m|Earth climate observation';
+F['27424']='2002-05-04|NASA|'+
+'2934 kg|6.8 m|water cycle, oceans, clouds';
+F['39084']='2013-02-11|NASA/USGS|'+
+'2623 kg|3.0 m|land imaging 30 m/pixel';
+F['49260']='2021-09-27|NASA/USGS|'+
+'2711 kg|3.0 m|land imaging continuity';
+F['40697']='2015-06-23|ESA|'+
+'1140 kg|3.85 m|multispectral imaging 10 m';
+F['41335']='2016-02-16|ESA/EUMETSAT|'+
+'1150 kg|3.9 m|ocean color and temperature';
+F['46984']='2020-11-21|NASA/CNES/EUMETSAT|'+
+'1192 kg|3.9 m|sea level altimetry';
+F['37849']='2011-10-28|NASA/NOAA|'+
+'2294 kg|4.2 m|weather and climate';
+F['43689']='2017-11-18|NOAA|'+
+'2294 kg|4.2 m|operational weather JPSS';
+F['33591']='2009-02-06|NOAA|'+
+'1441 kg|4.2 m|weather, last POES';
+F['40069']='2014-07-08|Roscosmos|'+
+'2700 kg|10 m|weather, Earth imaging';
+F['39766']='2014-05-24|JAXA|'+
+'2120 kg|10 m|radar mapping L-band SAR';
+F['37214']='2010-04-08|ESA|'+
+'720 kg|3.9 m|ice sheets and sea ice';
+F['41240']='2016-01-17|CNES/NASA/NOAA|'+
+'550 kg|2.2 m|ocean altimetry';
+F['36411']='2009-03-07|NASA|'+
+'1052 kg|4.7 m|exoplanets, retired 2018';
+F['41866']='2016-11-19|NOAA|'+
+'5192 kg|8.1 m|geo weather imager';
+F['51850']='2022-03-01|NOAA|'+
+'5192 kg|8.1 m|geo weather imager';
+F['40267']='2014-10-07|JMA Japan|'+
+'3500 kg|8.0 m|geo weather Himawari';
+F['40732']='2015-07-15|EUMETSAT|'+
+'2000 kg|3.2 m|geo weather MSG-4';
+F['41882']='2016-12-11|CMA China|'+
+'5400 kg|5.4 m|geo weather FY-4A';
+F['44476']='2019-08-06|Intelsat|'+
+'6600 kg|7.0 m|comms and TV broadcast';
+F['VGR1']='1977-09-05|NASA|'+
+'825 kg|3.7 m dish|interstellar probe';
+F['VGR2']='1977-08-20|NASA|'+
+'825 kg|3.7 m dish|interstellar probe';
+F['JWST']='2021-12-25|NASA/ESA/CSA|'+
+'6161 kg|6.5 m mirror|IR telescope at L2';
+F['35720']='2009-06-18|NASA|'+
+'1850 kg|3.9 m|Lunar Reconnaissance Orbiter';
+F['44441']='2019-07-22|ISRO|'+
+'2379 kg|3.8 m|Chandrayaan-2 lunar orbiter';
+F['43422']='2018-05-20|CNSA China|'+
+'420 kg|1.8 m|Queqiao relay at L2 of Moon';
+F['28888']='2005-08-12|NASA|'+
+'2180 kg|6.5 m|Mars Reconnaissance Orbiter';
+F['39331']='2013-11-18|NASA|'+
+'809 kg|2.3x11 m|MAVEN mars atmosphere';
+F['27988']='2003-06-02|ESA|'+
+'1120 kg|1.5x1.8 m|Mars Express imaging';
+F['41425']='2016-03-14|ESA/Roscosmos|'+
+'3732 kg|3.2 m|ExoMars Trace Gas Orbiter';
+F['47558']='2020-07-23|CNSA China|'+
+'3175 kg|3.4 m|Tianwen-1 mars orbiter';
+F['46985']='2020-07-19|UAESA UAE|'+
+'1350 kg|2.9 m|Hope mars weather orbiter';
+F['27001']='2001-04-07|NASA|'+
+'725 kg|2.2x5.5 m|2001 Mars Odyssey';
+F['CURIOSITY']='2012-08-06|NASA|'+
+'899 kg|2.9 m|Curiosity rover, Gale crater';
+F['PERSEVERANCE']='2021-02-18|NASA|'+
+'1025 kg|3.0 m|Perseverance rover, Jezero';
+F['ZHURONG']='2021-05-14|CNSA China|'+
+'240 kg|1.85 m|Zhurong rover, Utopia';
+F['CHANG-E4']='2019-01-03|CNSA China|'+
+'1200 kg|1.5 m|Chang-e 4 far side lander';
+log('FACTS B1 OK','ok');
+</script>
+<!-- P3 END -->
+<script>
+var COLX={STA:0x00ff00,SCI:0x66ff66,EO:0x0088ff,
+WX:0xffaa00,COM:0x00ffff,NAV:0xffff00,
+DEEP:0xaa00ff,SURF:0xffffff};
+var DB=[];
+function H(s){
+var x=0;
+for(var i=0;i<s.length;i++){
+x=(x*31+s.charCodeAt(i))%100000;
+}
+return x;
+}
+function CE(id,nm,tp,ic,mm,f){
+var h=H(id);
+DB.push({id:id,name:nm,type:tp,col:COLX[tp],body:'E',
+incl:ic,mm:mm,e:0.001,raan:h%360,
+ph:(h*7)%360*Math.PI/180,fact:f});
+}
+function CONS(pre,n,tp,ic,mm,f,planes){
+for(var i=0;i<n;i++){
+var p=i%planes, slot=Math.floor(i/planes);
+DB.push({id:pre+(i+1),name:pre+'-'+(i+1),
+type:tp,col:COLX[tp],body:'E',incl:ic,mm:mm,
+e:0.0002,raan:p*360/planes,
+ph:slot*2*Math.PI/Math.ceil(n/planes),fact:f});
+}
+}
+function CD(id,nm,lat,lon,f){
+DB.push({id:id,name:nm,type:'DEEP',col:COLX.DS,
+body:'E',sp:{lat:lat,lon:lon},fact:f});
+}
+function CM(id,nm,tp,alt,inc,per,f){
+var h=H(id);
+DB.push({id:id,name:nm,type:tp,col:COLX[tp],
+body:'M',orb:{alt:alt,inc:inc,per:per,
+ph:(h*13)%360*Math.PI/180,raan:h%360},fact:f});
+}
+function CMS(id,nm,lat,lon,f){
+DB.push({id:id,name:nm,type:'SURF',col:COLX.SURF,
+body:'M',surf:{lat:lat,lon:lon},fact:f});
+}
+function CA(id,nm,tp,alt,inc,per,f){
+var h=H(id);
+DB.push({id:id,name:nm,type:tp,col:COLX[tp],
+body:'A',orb:{alt:alt,inc:inc,per:per,
+ph:(h*17)%360*Math.PI/180,raan:h%360},fact:f});
+}
+function CAS(id,nm,lat,lon,f){
+DB.push({id:id,name:nm,type:'SURF',col:COLX.SURF,
+body:'A',surf:{lat:lat,lon:lon},fact:f});
+}
+CONS('STARLINK',125,'COM',53.05,15.06,
+'SpaceX Starlink broadband internet satellite',25);
+CONS('ONEWEB',56,'COM',87.9,13.09,
+'Eutelsat OneWeb broadband constellation sat',8);
+CONS('IRIDIUM',66,'COM',86.4,14.34,
+'Iridium NEXT voice and data comms satellite',6);
+CONS('ORBCOMM',40,'COM',52.0,14.8,
+'Orbcomm M2M IoT messaging satellite',4);
+CONS('GLOBALSTAR',24,'COM',52.0,14.0,
+'Globalstar voice and data comms satellite',4);
+CONS('GPS',32,'NAV',55.0,2.0056,
+'USA GPS Block navigation satellite MEO',6);
+CONS('GLONASS',24,'NAV',64.8,2.131,
+'Roscosmos GLONASS-K navigation satellite',3);
+CONS('GALILEO',28,'NAV',56.0,1.7047,
+'ESA Galileo FOC navigation satellite',3);
+CONS('BEIDOU',30,'NAV',55.3,1.862,
+'CNSA BeiDou-3 MEO navigation satellite',3);
+CE('25544','ISS','STA',51.64,15.49);
+CE('48274','TIANGONG','STA',41.47,15.61);
+CE('20580','HUBBLE','SCI',28.47,15.09);
+CE('43435','TESS','SCI',37.0,0.07);
+CE('24673','CHANDRA','SCI',40.0,0.4);
+CE('25905','XMM-NEWTON','SCI',40.0,0.35);
+CE('27704','SPITZER','SCI',35.0,0.02);
+CE('36411','KEPLER','SCI',98.7,14.2);
+CE('25994','TERRA','EO',98.21,14.57);
+CE('27424','AQUA','EO',98.21,14.57);
+CE('39084','LANDSAT-8','EO',98.22,14.57);
+CE('49260','LANDSAT-9','EO',98.22,14.57);
+CE('39634','SENTINEL-1A','EO',98.18,14.59);
+CE('40697','SENTINEL-2A','EO',98.57,14.31);
+CE('42063','SENTINEL-2B','EO',98.57,14.31);
+CE('41335','SENTINEL-3A','EO',98.65,14.19);
+CE('43013','SENTINEL-3B','EO',98.65,14.19);
+CE('46984','SENTINEL-6','EO',66.1,12.75);
+CE('37849','SUOMI-NPP','EO',98.74,14.19);
+CE('43689','NOAA-20','EO',98.74,14.19);
+CE('33591','NOAA-19','EO',99.19,14.12);
+CE('28654','NOAA-18','EO',99.08,14.13);
+CE('40069','METEOR-M2','EO',98.79,14.21);
+CE('29499','METOP-A','EO',98.7,14.21);
+CE('38771','METOP-B','EO',98.7,14.21);
+CE('43651','METOP-C','EO',98.7,14.21);
+CE('39766','ALOS-2','EO',97.92,14.79);
+CE('37214','CRYOSAT-2','EO',92.0,14.36);
+CE('41240','JASON-3','EO',66.04,12.75);
+CE('33492','GOSAT','EO',98.0,14.78);
+CE('43010','FENGYUN-3D','EO',98.75,14.18);
+CE('39574','GPM','EO',65.0,14.9);
+CE('41866','GOES-16','WX',0.05,1.0027);
+CE('43226','GOES-17','WX',0.05,1.0027);
+CE('51850','GOES-18','WX',0.05,1.0027);
+CE('40267','HIMAWARI-8','WX',0.02,1.0027);
+CE('41836','HIMAWARI-9','WX',0.02,1.0027);
+CE('40732','METEOSAT-11','WX',0.05,1.0027);
+CE('56138','MTG-I1','WX',0.05,1.0027);
+CE('41882','FENGYUN-4A','WX',0.05,1.0027);
+CE('48816','FENGYUN-4B','WX',0.05,1.0027);
+CE('44476','INTELSAT-39','COM',0.05,1.0027);
+CD('VGR1','VOYAGER-1',10,40,
+'1977-09-05|NASA|825 kg|3.7 m dish|interstellar');
+CD('VGR2','VOYAGER-2',-10,-40,
+'1977-08-20|NASA|825 kg|3.7 m dish|interstellar');
+CD('P10','PIONEER-10',20,-60,
+'1972-03-02|NASA|258 kg|2.7 m dish|Jupiter flyby');
+CD('P11','PIONEER-11',-20,60,
+'1973-04-06|NASA|260 kg|2.7 m dish|Saturn flyby');
+CD('NH','NEW-HORIZONS',5,-80,
+'2006-01-19|NASA|478 kg|2.1 m|Pluto and Kuiper');
+CD('PARKER','PARKER-SOLAR-PROBE',30,120,
+'2018-08-12|NASA|685 kg|2.3 m|solar corona');
+CD('SOLO','SOLAR-ORBITER',-15,150,
+'2020-02-10|ESA|1800 kg|3.6 m|solar polar');
+CD('JUNO','JUNO',40,-120,
+'2011-08-05|NASA|3625 kg|3 arrays|Jupiter');
+CD('LUCY','LUCY',-30,90,
+'2021-10-16|NASA|1550 kg|7.3 m|Trojans');
+CD('PSYCHE','PSYCHE',25,-150,
+'2023-10-13|NASA|2608 kg|24 m|metal asteroid');
+CD('DART','DART',-5,170,
+'2021-11-24|NASA|610 kg|8.6 m|Dimorphos');
+CD('JWST','JAMES-WEBB',0,180,
+'2021-12-25|NASA/ESA/CSA|6161 kg|6.5 m|L2');
+CD('EUCLID','EUCLID',10,-170,
+'2023-07-01|ESA|2160 kg|1.2 m|dark energy L2');
+CM('35720','LRO','SCI',50,90,118);
+CM('44441','CHANDRAYAAN-2','SCI',100,90,120);
+CM('43422','QUEQIAO','COM',65000,20,480);
+CM('52930','CAPSTONE','SCI',3500,40,480);
+CMS('CHANG-E4','CHANG-E-4',-45.5,177.6);
+CMS('CHANG-E3','CHANG-E-3',44.1,19.5);
+CMS('YUTU-2','YUTU-2',-45.5,177.7);
+CMS('LUNA-25','LUNA-25',-60.0,40.0);
+CA('28888','MRO','SCI',300,90,112);
+CA('39331','MAVEN','SCI',400,75,270);
+CA('27988','MARS-EXPRESS','SCI',400,86,440);
+CA('39370','MOM','SCI',400,19,720);
+CA('41425','EXOMARS-TGO','SCI',400,74,120);
+CA('47558','TIANWEN-1','SCI',300,85,490);
+CA('46985','HOPE','SCI',400,25,330);
+CA('27001','MARS-ODYSSEY','SCI',400,90,118);
+CAS('CURIOSITY','CURIOSITY',-4.6,137.4);
+CAS('PERSEVERANCE','PERSEVERANCE',18.4,77.5);
+CAS('ZHURONG','ZHURONG',25.1,109.9);
+CAS('INSIGHT','INSIGHT',4.5,135.6);
+log('DATA B2 OK n='+DB.length,'ok');
+</script>
+<!-- P4 END -->
+<script>
+var state={stream:false,track:null,mode:null,filter:null};
+var lastTap=null;
+var issLive=null;
+var netState=0;
+var curBody='E';
+var BRAD={E:6371,M:1737,A:3390};
+function pollISS(){
+var u='https://api.wheretheiss.at/v1/satellites/25544';
+fetch(u).then(function(r){ return r.json(); })
+.then(function(d){
+issLive={lat:d.latitude,lon:d.longitude,
+alt:d.altitude};
+if(netState!==1){
+netState=1;
+log('NET OK: ISS live telemetry','ok');
+}
+}).catch(function(){
+if(netState!==2){
+netState=2;
+log('NET FAIL: offline model mode','info');
+}
+});
+}
+pollISS();
+setInterval(pollISS,5000);
+function orbitA(s){
+if(s.orb){ return BRAD[s.body]+s.orb.alt; }
+var T=1440/s.mm;
+var sec=T*60/(2*Math.PI);
+return Math.pow(398600.4418*sec*sec,1/3);
+}
+function modelPos(s,date){
+var T=1440/s.mm;
+var t=date.getTime()/60000;
+var u=2*Math.PI*((t%T)/T)+s.ph;
+var i=s.incl*Math.PI/180;
+var su=Math.sin(u), cu=Math.cos(u);
+var lat=Math.asin(Math.sin(i)*su)*180/Math.PI;
+var lon=Math.atan2(Math.cos(i)*su,cu)*180/Math.PI;
+lon=lon+s.raan-0.250684*t;
+lon=((lon+180)%360+360)%360-180;
+var a=orbitA(s);
+return {lat:lat,lon:lon,
+alt:a*(1+s.e*Math.cos(u))-6371};
+}
+function bodyPos(s,date){
+var o=s.orb;
+var t=date.getTime()/60000;
+var u=2*Math.PI*((t%o.per)/o.per)+o.ph;
+var i=o.inc*Math.PI/180;
+var su=Math.sin(u), cu=Math.cos(u);
+var lat=Math.asin(Math.sin(i)*su)*180/Math.PI;
+var lon=Math.atan2(Math.cos(i)*su,cu)*180/Math.PI;
+lon=lon+o.raan;
+lon=((lon+180)%360+360)%360-180;
+return {lat:lat,lon:lon,alt:o.alt};
+}
+function getPos(s,date){
+if(s.id==='25544'&&issLive) return issLive;
+if(s.sp){
+return {lat:s.sp.lat,lon:s.sp.lon,alt:0,ds:true};
+}
+if(s.surf){
+return {lat:s.surf.lat,lon:s.surf.lon,alt:0,sf:true};
+}
+if(s.orb) return bodyPos(s,date);
+return modelPos(s,date);
+}
+function orbitParams(s){
+var R=BRAD[s.body];
+var a=orbitA(s);
+var e=s.orb?0.01:(s.e||0.001);
+return {apo:a*(1+e)-R,peri:a*(1-e)-R,
+period:s.orb?s.orb.per:1440/s.mm,
+inc:s.orb?s.orb.inc:s.incl};
+}
+var WIKI_URL='https://ru.wikipedia.org/w/api.php?'+
+'action=query&generator=search&gsrlimit=1'+
+'&prop=extracts&explaintext=1&exchars=8000'+
+'&format=json&origin=*&gsrsearch=';
+function fetchWiki(name,box){
+fetch(WIKI_URL+encodeURIComponent(name))
+.then(function(r){ return r.json(); })
+.then(function(j){
+var p=j&&j.query&&j.query.pages;
+if(!p) throw 0;
+var pg=p[Object.keys(p)[0]];
+var ex=pg.extract||'';
+box.textContent=ex?ex:'WIKI: empty';
+}).catch(function(){
+box.textContent='WIKI: unavailable offline';
+});
+}
+function genFact(s){
+if(s.type==='COM') return 'Communications constellation satellite';
+if(s.type==='NAV') return 'Navigation constellation satellite MEO';
+if(s.type==='WX') return 'Geostationary weather imager';
+if(s.type==='EO') return 'Earth observation satellite';
+if(s.type==='SURF') return 'Surface lander or rover';
+if(s.type==='DEEP') return 'Deep space probe';
+return 'Orbital spacecraft';
+}
+function openInfo(s){
+lastTap=s;
+var body=document.getElementById('info-body');
+body.innerHTML='';
+function add(t,c){
+var d=document.createElement('div');
+d.className='l-'+(c||'info');
+d.textContent=t;
+body.appendChild(d);
+}
+add(s.name+' ['+s.id+'] type:'+s.type+
+' body:'+s.body,'ok');
+var f=s.fact||F[s.id]||null;
+if(f){
+var q=f.split('|');
+add('LAUNCH: '+q[0]);
+add('OPERATOR: '+q[1]);
+add('MASS: '+q[2]);
+add('SIZE: '+q[3]);
+add('MISSION: '+q[4]);
+}else{
+add('Reference: '+genFact(s),'info');
+}
+add('--- WIKIPEDIA (scroll to read) ---','info');
+var w=document.createElement('div');
+w.className='l-info';
+w.style.whiteSpace='pre-wrap';
+w.textContent='loading...';
+body.appendChild(w);
+fetchWiki(s.name.replace(/-/g,' '),w);
+document.getElementById('info-panel')
+.classList.add('show');
+}
+function satInfo(s){
+var pos=getPos(s,new Date());
+var line='INFO: '+s.name+' ['+s.id+']';
+if(s.sp) line+=' | DEEP SPACE';
+else if(s.surf) line+=' | SURFACE ASSET';
+else if(pos&&isFinite(pos.lat)){
+line+=' | LAT:'+pos.lat.toFixed(2)+
+' LON:'+pos.lon.toFixed(2)+
+' ALT:'+pos.alt.toFixed(0)+'km';
+}else line+=' | NO DATA';
+log(line,'data');
+if(!s.sp&&!s.surf){
+var op=orbitParams(s);
+log('  APO: '+op.apo.toFixed(0)+' km | PERI: '+
+op.peri.toFixed(0)+' km | PERIOD: '+
+op.period.toFixed(0)+' min | INC: '+
+op.inc.toFixed(1)+' deg','info');
+}
+}
+function pass(s){
+if(s.body!==curBody) return false;
+var f=state.filter;
+if(!f) return true;
+return s.type===f;
+}
+function visibleList(){
+return DB.filter(pass);
+}
+var TOP5=[];
+function byName(n){
+var r=null;
+DB.forEach(function(s){
+if(!r&&s.name.indexOf(n)===0) r=s;
+});
+return r;
+}
+TOP5=[byName('ISS'),byName('TIANGONG'),
+byName('HUBBLE'),byName('STARLINK-1'),
+byName('VOYAGER-1')].filter(Boolean);
+</script>
+<!-- P5 END -->
+<script>
+function run(raw){
+var p=raw.trim().toLowerCase().split(/\s+/);
+var c=p[0], arg=p.slice(1).join(' ');
+log('> '+raw,'cmd');
+if(c==='help'){
+log('COMMANDS:','ok');
+log(' list | scan - visible objects');
+log(' count - total in database');
+log(' find <name/id> | info <name>');
+log(' track <name> | trackall | tracktop');
+log(' tracklast | untrack');
+log(' filter <sta|sci|eo|wx|com|nav|');
+log('   deep|surf|off>');
+log(' body <earth|moon|mars>');
+log(' stream on|off | clear | about');
+log(' globe | term');
+}
+else if(c==='about'){ log(ABOUT_TEXT,'ok'); }
+else if(c==='count'){
+log('TOTAL IN DB: '+DB.length,'ok');
+}
+else if(c==='list'||c==='scan'){
+var vl=visibleList();
+log('--- VISIBLE: '+vl.length+' ---','info');
+vl.slice(0,80).forEach(function(s){
+log('['+s.id+'] '+s.name,'data');
+});
+if(vl.length>80) log('...and '+(vl.length-80)+
+' more','info');
+}
+else if(c==='filter'){
+if(!arg||arg==='off'){
+state.filter=null;
+log('FILTER OFF','ok');
+}else{
+var map={sta:'STA',sci:'SCI',eo:'EO',wx:'WX',
+com:'COM',nav:'NAV',deep:'DEEP',surf:'SURF'};
+if(map[arg]){
+state.filter=map[arg];
+log('FILTER: '+map[arg],'ok');
+}else log('Unknown filter','err');
+}
+}
+else if(c==='body'){
+if(arg==='earth') setBody('E');
+else if(arg==='moon') setBody('M');
+else if(arg==='mars') setBody('A');
+else log('Usage: body earth|moon|mars','err');
+}
+else if(c==='find'||c==='info'){
+if(!arg){ log('Usage: '+c+' <name>','err'); return; }
+var f=null;
+DB.forEach(function(s){
+if(!f&&(s.id===arg||
+s.name.toLowerCase().indexOf(arg)!==-1)) f=s;
+});
+if(f){ lastTap=f; satInfo(f); }
+else log('NOT FOUND: '+arg,'err');
+}
+else if(c==='track'){
+var t=null;
+DB.forEach(function(s){
+if(!t&&s.name.toLowerCase().indexOf(arg)!==-1) t=s;
+});
+if(t){
+state.track=t; state.mode=null;
+log('TRACKING ONE: '+t.name,'ok');
+}else log('Unknown','err');
+}
+else if(c==='trackall'){
+state.track=null; state.mode='all';
+log('TRACKING ALL: round-robin','ok');
+}
+else if(c==='tracktop'){
+state.track=null; state.mode='top';
+var tn=TOP5.map(function(s){ return s.name; })
+.join(', ');
+log('TRACKING TOP-5: '+tn,'ok');
+}
+else if(c==='tracklast'){
+if(lastTap){
+state.track=lastTap; state.mode=null;
+log('TRACKING ONE: '+lastTap.name,'ok');
+}else log('Tap a sat first','err');
+}
+else if(c==='untrack'){
+state.track=null; state.mode=null;
+log('Tracking stopped','info');
+}
+else if(c==='stream'){
+if(arg==='on'){ state.stream=true;
+log('Stream ON','ok'); }
+else if(arg==='off'){ state.stream=false;
+log('Stream OFF','info'); }
+else log('Usage: stream on|off','err');
+}
+else if(c==='clear'){ out.innerHTML=''; }
+else if(c==='globe'){ switchTab('globe'); }
+else if(c==='term'){ switchTab('term'); }
+else if(c){ log('Unknown: '+c,'err'); }
+}
+var rr=0, rrTop=0;
+function satLine(s,now){
+var p=getPos(s,now);
+var head='['+now.toTimeString().split(' ')[0]+
+'] '+s.name+' >> ';
+if(p&&p.ds) return head+'DEEP SPACE';
+if(p&&p.sf) return head+'SURFACE';
+if(p&&isFinite(p.lat)){
+return head+'LAT:'+p.lat.toFixed(2)+
+' LON:'+p.lon.toFixed(2)+
+' ALT:'+p.alt.toFixed(0)+'km';
+}
+return head+'NO DATA';
+}
+setInterval(function(){
+var now=new Date();
+if(state.track) log(satLine(state.track,now),'data');
+else if(state.mode==='all'){
+log(satLine(DB[rr%DB.length],now),'data'); rr++;
+}
+else if(state.mode==='top'){
+log(satLine(TOP5[rrTop%TOP5.length],now),'data');
+rrTop++;
+}
+else if(state.stream){
+var r=DB[Math.floor(Math.random()*DB.length)];
+log('SIG: '+r.name+' @ '+now.toTimeString()
+.split(' ')[0],'info');
+}
+},1000);
+log('ENG C OK | DB='+DB.length,'ok');
+</script>
+<!-- P6 END -->
+<script>
+var gCv=null,gCtx=null,gReady=false;
+var yaw=0.6,pitch=0.35,zoom=1,gDrag=false;
+var GRID=[],EQ=[];
+var drawErrs=0;
+var BODY_STYLE={
+E:{line:'#005500',eq:'#00ff00',rim:'#003300'},
+M:{line:'#445544',eq:'#aaffaa',rim:'#223322'},
+A:{line:'#663311',eq:'#ff8844',rim:'#331100'}
+};
+function v3(lat,lon,r){
+var la=lat*Math.PI/180, lo=lon*Math.PI/180;
+return [r*Math.cos(la)*Math.cos(lo),
+r*Math.sin(la),
+r*Math.cos(la)*Math.sin(lo)];
+}
+function buildGrid(){
+GRID.length=0; EQ.length=0;
+var lat,lon;
+for(lat=-60;lat<=60;lat+=30){
+for(lon=-180;lon<180;lon+=6){
+GRID.push([v3(lat,lon,1),v3(lat,lon+6,1)]);
+}
+}
+for(lon=-180;lon<180;lon+=30){
+for(lat=-90;lat<90;lat+=6){
+GRID.push([v3(lat,lon,1),v3(lat+6,lon,1)]);
+}
+}
+for(lon=-180;lon<180;lon+=4){
+EQ.push([v3(0,lon,1.002),v3(0,lon+4,1.002)]);
+}
+}
+function rot(v){
+var cy=Math.cos(yaw), sy=Math.sin(yaw);
+var cp=Math.cos(pitch), sp=Math.sin(pitch);
+var x=v[0]*cy+v[2]*sy;
+var z=-v[0]*sy+v[2]*cy;
+var y2=v[1]*cp-z*sp;
+var z2=v[1]*sp+z*cp;
+return [x,y2,z2];
+}
+function proj(v){
+var w=gCv.width,h=gCv.height;
+var R=Math.min(w,h)*0.46*zoom;
+var p=rot(v);
+return {x:w/2+p[0]*R,y:h/2-p[1]*R,z:p[2]};
+}
+function gSize(){
+var vg=document.getElementById('v-globe');
+gCv.width=vg.clientWidth||window.innerWidth;
+gCv.height=vg.clientHeight||
+(window.innerHeight-52);
+}
+function drawGlobe(){
+if(gReady){
+try{
+if(!gDrag) yaw+=0.0004;
+var w=gCv.width,h=gCv.height;
+var st=BODY_STYLE[curBody];
+gCtx.fillStyle='#050505';
+gCtx.fillRect(0,0,w,h);
+var R=Math.min(w,h)*0.46*zoom;
+gCtx.strokeStyle=st.rim;
+gCtx.beginPath();
+gCtx.arc(w/2,h/2,R,0,6.2832);
+gCtx.stroke();
+gCtx.strokeStyle=st.line;
+gCtx.beginPath();
+GRID.forEach(function(seg){
+var a=proj(seg[0]), b=proj(seg[1]);
+if(a.z>0&&b.z>0){
+gCtx.moveTo(a.x,a.y);
+gCtx.lineTo(b.x,b.y);
+}
+});
+gCtx.stroke();
+gCtx.strokeStyle=st.eq;
+gCtx.beginPath();
+EQ.forEach(function(seg){
+var a=proj(seg[0]), b=proj(seg[1]);
+if(a.z>0&&b.z>0){
+gCtx.moveTo(a.x,a.y);
+gCtx.lineTo(b.x,b.y);
+}
+});
+gCtx.stroke();
+var now=new Date();
+var vl=visibleList();
+vl.forEach(function(s){
+var p=getPos(s,now);
+if(!p){ s._front=false; return; }
+var r=1+Math.min(Math.max(p.alt,0),70000)/
+BRAD[curBody];
+if(s.sp) r=1.9;
+if(s.surf) r=1.001;
+var q=proj(v3(p.lat,p.lon,r));
+s._x=q.x; s._y=q.y; s._front=q.z>0;
+if(q.z<=0) return;
+gCtx.fillStyle='#'+
+('000000'+s.col.toString(16)).slice(-6);
+gCtx.beginPath();
+gCtx.arc(q.x,q.y,2,0,6.2832);
+gCtx.fill();
+});
+}catch(e){
+if(drawErrs<3){
+drawErrs++;
+log('DRAW ERR: '+e.message,'err');
+}
+}
+}
+requestAnimationFrame(drawGlobe);
+}
+function tapGlobe(e){
+var rect=gCv.getBoundingClientRect();
+var x=e.clientX-rect.left, y=e.clientY-rect.top;
+var best=null,bd=1e9;
+DB.forEach(function(s){
+if(!s._front||s._x===undefined) return;
+var d=Math.sqrt((s._x-x)*(s._x-x)+
+(s._y-y)*(s._y-y));
+if(d<bd){ bd=d; best=s; }
+});
+if(best&&bd<30){
+lastTap=best;
+satInfo(best);
+document.getElementById('tag-name')
+.textContent=best.name;
+var tg=document.getElementById('tag');
+tg.style.left=(x+12)+'px';
+tg.style.top=(y-10)+'px';
+tg.style.display='block';
+setTimeout(function(){
+tg.style.display='none';
+},4000);
+}
+}
+function setBody(b){
+curBody=b;
+var bs=document.querySelectorAll('.bbtn');
+Array.prototype.forEach.call(bs,function(x){
+x.classList.toggle('active',
+x.getAttribute('data-b')===b);
+});
+var nm={E:'EARTH',M:'MOON',A:'MARS'};
+log('GLOBE BODY: '+nm[b],'ok');
+}
+function globeEvents(){
+var pts={},md=false,mx=0,my=0,mt=0,moved=0;
+var pinchD=0;
+gCv.addEventListener('pointerdown',function(e){
+pts[e.pointerId]={x:e.clientX,y:e.clientY};
+var n=Object.keys(pts).length;
+if(n===1){
+md=true; gDrag=true;
+mx=e.clientX; my=e.clientY;
+mt=Date.now(); moved=0;
+}else if(n===2){
+var ks=Object.keys(pts);
+pinchD=Math.hypot(
+pts[ks[0]].x-pts[ks[1]].x,
+pts[ks[0]].y-pts[ks[1]].y);
+md=false;
+}
+try{ gCv.setPointerCapture(e.pointerId); }catch(e2){}
+});
+gCv.addEventListener('pointermove',function(e){
+if(!pts[e.pointerId]) return;
+var prev=pts[e.pointerId];
+var dx=e.clientX-prev.x, dy=e.clientY-prev.y;
+pts[e.pointerId]={x:e.clientX,y:e.clientY};
+var ks=Object.keys(pts);
+if(ks.length===2){
+var d=Math.hypot(
+pts[ks[0]].x-pts[ks[1]].x,
+pts[ks[0]].y-pts[ks[1]].y);
+if(pinchD>0){
+zoom*=d/pinchD;
+zoom=Math.max(0.5,Math.min(4,zoom));
+}
+pinchD=d;
+}else if(md){
+yaw+=dx*0.005;
+pitch+=dy*0.005;
+pitch=Math.max(-1.5,Math.min(1.5,pitch));
+moved+=Math.abs(dx)+Math.abs(dy);
+}
+});
+function up(e){
+delete pts[e.pointerId];
+if(Object.keys(pts).length<2) pinchD=0;
+if(Object.keys(pts).length===0){
+gDrag=false;
+if(md&&moved<10&&Date.now()-mt<500){
+tapGlobe(e);
+}
+md=false;
+}
+}
+gCv.addEventListener('pointerup',up);
+gCv.addEventListener('pointercancel',up);
+}
+function initGlobe(){
+if(gReady) return true;
+gCv=document.getElementById('c2d');
+if(!gCv){ log('NO CANVAS','err'); return false; }
+gCtx=gCv.getContext('2d');
+buildGrid();
+gReady=true;
+gSize();
+if(!gCv.__ev){
+globeEvents();
+gCv.__ev=1;
+}
+if(!gCv.__bb){
+var bs=document.querySelectorAll('.bbtn');
+Array.prototype.forEach.call(bs,function(x){
+x.addEventListener('click',function(){
+setBody(x.getAttribute('data-b'));
+});
+});
+gCv.__bb=1;
+}
+requestAnimationFrame(drawGlobe);
+log('GLOBE READY','ok');
+return true;
+}
+window.addEventListener('resize',function(){
+if(gReady) gSize();
+});
+log('GLOBE BLOCK OK','ok');
+</script>
+<script>
+function wikiClean(name){
+return name.replace(/-\d+$/,'').replace(/-/g,' ');
+}
+function wikiFetch(q){
+log('WIKI SEARCH: '+q,'info');
+fetch(WIKI_URL+encodeURIComponent(q))
+.then(function(r){ return r.json(); })
+.then(function(j){
+var p=j&&j.query&&j.query.pages;
+if(!p) throw 0;
+var pg=p[Object.keys(p)[0]];
+log('WIKI: '+pg.title,'ok');
+var ex=(pg.extract||'').slice(0,700);
+if(ex) log(ex,'info');
+else log('WIKI: empty article','info');
+}).catch(function(){
+log('WIKI: unavailable (offline?)','err');
+});
+}
+var __oldRun=run;
+run=function(raw){
+var p=raw.trim().toLowerCase().split(/\s+/);
+var q=null;
+if(p[0]==='wiki'&&p.length>1){
+q=p.slice(1).join(' ');
+}else if(p.length>1&&p[p.length-1]==='wiki'){
+q=p.slice(0,p.length-1).join(' ');
+}
+if(q){ wikiFetch(q); return; }
+__oldRun(raw);
+};
+var __oldFetchWiki=fetchWiki;
+fetchWiki=function(name,box){
+__oldFetchWiki(wikiClean(name),box);
+};
+function tapGlobe(e){
+var rect=gCv.getBoundingClientRect();
+var x=e.clientX-rect.left, y=e.clientY-rect.top;
+var best=null,bd=1e9;
+DB.forEach(function(s){
+if(s.body!==curBody) return;
+if(!s._front||s._x===undefined) return;
+var d=Math.sqrt((s._x-x)*(s._x-x)+
+(s._y-y)*(s._y-y));
+if(d<bd){ bd=d; best=s; }
+});
+if(best&&bd<30){
+lastTap=best;
+satInfo(best);
+document.getElementById('tag-name')
+.textContent=best.name;
+var tg=document.getElementById('tag');
+tg.style.left=(x+12)+'px';
+tg.style.top=(y-10)+'px';
+tg.style.display='block';
+setTimeout(function(){
+tg.style.display='none';
+},4000);
+}
+}
+log('WIKI CMD: <query> wiki | wiki <query>','info');
+log('P9 WIKI OK','ok');
+</script>
+<script>
+function aiAsk(q){
+log('AI THINKING...','info');
+var bodies={E:'Земля',M:'Луна',A:'Марс'};
+var ctx='Ты бортовой ИИ космического терминала '+
+'COSMO PLUS. Отвечай кратко, 2-4 предложения, '+
+'на русском языке, в стиле бортового компьютера. '+
+'Сейчас открыт глобус: '+bodies[curBody]+'. ';
+var url='https://text.pollinations.ai/'+
+encodeURIComponent(ctx+q);
+fetch(url).then(function(r){
+if(!r.ok) throw 0;
+return r.text();
+}).then(function(t){
+t=(t||'').trim();
+if(!t) throw 0;
+t.split(/\n+/).slice(0,6).forEach(function(line){
+if(line) log('AI: '+line,'ok');
+});
+}).catch(function(){
+log('AI OFFLINE: try wiki <query>','err');
+});
+}
+var __oldRun2=run;
+run=function(raw){
+var p=raw.trim().toLowerCase().split(/\s+/);
+var c=p[0];
+if(c==='ai'){
+aiAsk(p.slice(1).join(' ')||'расскажи о себе');
+return;
+}
+if(c==='help'){
+__oldRun2(raw);
+log(' ai <question> - ask onboard AI');
+return;
+}
+__oldRun2(raw);
+};
+(function(){
+var mp=document.getElementById('menu-panel');
+if(!mp) return;
+var b=document.createElement('button');
+b.className='mi';
+b.textContent='ASK AI';
+b.addEventListener('click',function(e){
+e.stopPropagation();
+mp.classList.remove('show');
+switchTab('term');
+inp.value='ai ';
+inp.focus();
+});
+mp.appendChild(b);
+})();
+log('P10 AI OK','ok');
+</script>
+<script>
+function clean(t){
+t=(t||'').trim();
+if(t.length<2) throw 0;
+return t;
+}
+function pUrl(prompt){
+return 'https://text.pollinations.ai/'+
+encodeURIComponent(prompt)+'?model=openai';
+}
+function fDirect(prompt){
+return fetch(pUrl(prompt)).then(function(r){
+if(!r.ok) throw 0; return r.text();
+}).then(clean);
+}
+function fAllorigins(prompt){
+var u='https://api.allorigins.win/get?url='+
+encodeURIComponent(pUrl(prompt));
+return fetch(u).then(function(r){
+if(!r.ok) throw 0; return r.json();
+}).then(function(j){ return clean(j.contents); });
+}
+function fCodetabs(prompt){
+var u='https://api.codetabs.com/v1/proxy?quest='+
+encodeURIComponent(pUrl(prompt));
+return fetch(u).then(function(r){
+if(!r.ok) throw 0; return r.text();
+}).then(clean);
+}
+function fCorsproxy(prompt){
+var u='https://corsproxy.io/?url='+
+encodeURIComponent(pUrl(prompt));
+return fetch(u).then(function(r){
+if(!r.ok) throw 0; return r.text();
+}).then(clean);
+}
+function fPost(prompt){
+return fetch('https://text.pollinations.ai/',{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({model:'openai-large',
+messages:[{role:'user',content:prompt}],
+private:true})}).then(function(r){
+if(!r.ok) throw 0; return r.text();
+}).then(clean);
+}
+var LOCAL_DICT=[
+['орбит','Орбита - траектория движения тела '+
+'в поле тяготения. Спутники не падают, потому '+
+'что их боковая скорость уравновешивает '+
+'притяжение: они постоянно падают мимо Земли.'],
+['лагранж','Точки Лагранжа - позиции, где '+
+'тяготение двух тел и центробежная сила '+
+'уравновешены. JWST стоит в L2 в 1.5 млн км '+
+'от Земли в направлении от Солнца.'],
+['мкс','МКС - пилотируемая станция на орбите '+
+'408 км, наклонение 51.6 градуса, скорость '+
+'7.66 км/с, 16 витков в сутки.'],
+['iss','ISS - пилотируемая станция на орбите '+
+'408 км, наклонение 51.6 градуса, скорость '+
+'7.66 км/с, 16 витков в сутки.'],
+['starlink','Starlink - созвездие SpaceX из '+
+'тысяч аппаратов на 550 км для широкополосного '+
+'интернета. Наклонение оболочек 53 градуса.'],
+['старлинк','Starlink - созвездие SpaceX из '+
+'тысяч аппаратов на 550 км для интернета.'],
+['луна','Луна - спутник Земли, средний радиус '+
+'орбиты 384400 км, период 27.3 суток.'],
+['марс','Марс - четвёртая планета, среднее '+
+'расстояние от Земли 225 млн км, сигнал идёт '+
+'от 4 до 24 минут.'],
+['войджер','Voyager-1 - самый дальний аппарат, '+
+'более 24 млрд км, покинул гелиосферу в 2012, '+
+'сигнал идёт свыше 22 часов.'],
+['voyager','Voyager-1 - самый дальний аппарат, '+
+'более 24 млрд км, покинул гелиосферу в 2012.'],
+['телескоп','Космические телескопы (Hubble, '+
+'JWST) вынесены за атмосферу: Hubble видит '+
+'УФ и оптику, JWST - инфракрасный диапазон '+
+'из точки L2.'],
+['gps','GPS - навигационное созвездие США: '+
+'24+ аппарата на 20180 км, период 12 ч, '+
+'наклонение 55 градусов.'],
+['глонасс','GLONASS - навигационное созвездие '+
+'России: 24 аппарата на 19100 км, период '+
+'11 ч 15 мин, наклонение 64.8 градуса.'],
+['пульсар','Пульсары - вращающиеся нейтронные '+
+'звёзды, дающие строго периодические '+
+'радиоимпульсы; используются как эталоны '+
+'времени в дальней навигации.']
+];
+function fLocal(q){
+var ql=q.toLowerCase();
+var hit=null;
+DB.forEach(function(s){
+if(hit) return;
+var nm=s.name.toLowerCase().split('-')[0];
+if(nm.length>3&&ql.indexOf(nm)!==-1) hit=s;
+});
+if(hit){
+var f=hit.fact||F[hit.id]||genFact(hit);
+return 'OFFLINE DB: '+hit.name+' | '+f;
+}
+for(var i=0;i<LOCAL_DICT.length;i++){
+if(ql.indexOf(LOCAL_DICT[i][0])!==-1){
+return 'OFFLINE AI: '+LOCAL_DICT[i][1];
+}
+}
+return 'OFFLINE AI: каналы недоступны. '+
+'Спроси про спутник по имени или используй '+
+'wiki <запрос> и list.';
+}
+function aiAsk(q){
+log('AI THINKING (5 routes + offline)...','info');
+var bodies={E:'Земля',M:'Луна',A:'Марс'};
+var ctx='Ты бортовой ИИ космического терминала '+
+'COSMO PLUS. Отвечай кратко, 2-4 предложения, '+
+'на русском, в стиле бортового компьютера. '+
+'Открыт глобус: '+bodies[curBody]+'. ';
+var prompt=ctx+q;
+function show(t){
+t.split(/\n+/).slice(0,6).forEach(function(line){
+if(line) log('AI: '+line,'ok');
+});
+}
+function chain(list,i){
+if(i>=list.length){
+show(fLocal(q));
+return Promise.resolve();
+}
+return aiTimeout(list[i](prompt),15000)
+.then(show)
+.catch(function(){
+log('AI: route '+(i+1)+' down','info');
+return chain(list,i+1);
+});
+}
+chain([fDirect,fAllorigins,fCodetabs,
+fCorsproxy,fPost],0);
+}
+log('P13 AI ROUTED OK','ok');
+</script>
+<script>
+function aiTm(pr,ms){
+return new Promise(function(res,rej){
+var t=setTimeout(function(){rej(new Error('t'));},ms);
+pr.then(function(v){clearTimeout(t);res(v);},
+function(e){clearTimeout(t);rej(e);});
+});
+}
+function aiClean(t){
+t=(t||'').trim();
+if(t.length<2) throw 0;
+return t;
+}
+function aiUrl(prompt){
+return 'https://text.pollinations.ai/'+
+encodeURIComponent(prompt)+'?model=openai';
+}
+function aiR1(prompt){
+return fetch(aiUrl(prompt)).then(function(r){
+if(!r.ok) throw 0; return r.text();
+}).then(aiClean);
+}
+function aiR2(prompt){
+return fetch('https://api.allorigins.win/get?url='+
+encodeURIComponent(aiUrl(prompt))).then(function(r){
+if(!r.ok) throw 0; return r.json();
+}).then(function(j){ return aiClean(j.contents); });
+}
+function aiR3(prompt){
+return fetch('https://api.codetabs.com/v1/proxy?quest='+
+encodeURIComponent(aiUrl(prompt))).then(function(r){
+if(!r.ok) throw 0; return r.text();
+}).then(aiClean);
+}
+function aiR4(prompt){
+return fetch('https://corsproxy.io/?url='+
+encodeURIComponent(aiUrl(prompt))).then(function(r){
+if(!r.ok) throw 0; return r.text();
+}).then(aiClean);
+}
+function aiLocal(q){
+try{
+var ql=q.toLowerCase();
+var hit=null;
+DB.forEach(function(s){
+if(hit) return;
+var nm=s.name.toLowerCase().split('-')[0];
+if(nm.length>3&&ql.indexOf(nm)!==-1) hit=s;
+});
+if(hit){
+var f=hit.fact||F[hit.id]||genFact(hit);
+return 'OFFLINE DB: '+hit.name+' | '+f;
+}
+if(typeof LOCAL_DICT!=='undefined'){
+for(var i=0;i<LOCAL_DICT.length;i++){
+if(ql.indexOf(LOCAL_DICT[i][0])!==-1){
+return 'OFFLINE AI: '+LOCAL_DICT[i][1];
+}
+}
+}
+return 'OFFLINE AI: внешние каналы недоступны. '+
+'Спроси про спутник по имени или используй wiki.';
+}catch(e){
+return 'OFFLINE AI: словарь повреждён.';
+}
+}
+function aiAsk(q){
+try{
+log('AI THINKING...','info');
+var bodies={E:'Земля',M:'Луна',A:'Марс'};
+var ctx='Ты бортовой ИИ космического терминала '+
+'COSMO PLUS. Отвечай кратко, на русском. '+
+'Открыт глобус: '+bodies[curBody]+'. ';
+var prompt=ctx+q;
+function show(t){
+String(t).split(/\n+/).slice(0,6)
+.forEach(function(line){
+if(line) log('AI: '+line,'ok');
+});
+}
+var routes=[aiR1,aiR2,aiR3,aiR4];
+function go(i){
+if(i>=routes.length){ show(aiLocal(q)); return; }
+aiTm(routes[i](prompt),15000).then(show)
+.catch(function(){
+log('AI: route '+(i+1)+' down','info');
+go(i+1);
+});
+}
+go(0);
+}catch(e){
+log('AI ERR: '+e.message,'err');
+log(aiLocal(q),'ok');
+}
+}
+log('P14 AI SELF OK','ok');
+</script>
+<script>
+function aiTm(pr,ms){
+return new Promise(function(res,rej){
+var t=setTimeout(function(){
+rej(new Error('timeout '+ms));
+},ms);
+pr.then(function(v){clearTimeout(t);res(v);},
+function(e){clearTimeout(t);rej(e);});
+});
+}
+function aiClean(t){
+t=(t||'').trim();
+if(t.length<2) throw 0;
+return t;
+}
+function aiRep(r){
+if(!r.ok){
+log('AI: http status '+r.status,'info');
+throw 0;
+}
+return r.text();
+}
+function aiErr(e){
+if(e&&e.message&&e.message.indexOf('timeout')!==0){
+log('AI: net error: '+e.message,'info');
+}
+throw e;
+}
+function aiUrl(prompt,model){
+return 'https://text.pollinations.ai/'+
+encodeURIComponent(prompt)+'?model='+model;
+}
+function aiR1(prompt){
+return fetch(aiUrl(prompt,'openai'))
+.then(aiRep).then(aiClean).catch(aiErr);
+}
+function aiR2(prompt){
+return fetch(aiUrl(prompt,'mistral'))
+.then(aiRep).then(aiClean).catch(aiErr);
+}
+function aiR3(prompt){
+return fetch('https://corsproxy.io/?url='+
+encodeURIComponent(aiUrl(prompt,'openai')))
+.then(aiRep).then(aiClean).catch(aiErr);
+}
+function aiR4(prompt){
+return fetch('https://api.allorigins.win/get?url='+
+encodeURIComponent(aiUrl(prompt,'openai')))
+.then(function(r){
+if(!r.ok){ log('AI: http status '+r.status,'info');
+throw 0; }
+return r.json();
+}).then(function(j){ return aiClean(j.contents); })
+.catch(aiErr);
+}
+function aiR5(prompt){
+return fetch('https://api.codetabs.com/v1/proxy?quest='+
+encodeURIComponent(aiUrl(prompt,'openai')))
+.then(aiRep).then(aiClean).catch(aiErr);
+}
+function aiLocal(q){
+try{
+var ql=q.toLowerCase();
+var hit=null;
+DB.forEach(function(s){
+if(hit) return;
+var nm=s.name.toLowerCase().split('-')[0];
+if(nm.length>3&&ql.indexOf(nm)!==-1) hit=s;
+});
+if(hit){
+var f=hit.fact||F[hit.id]||genFact(hit);
+return 'OFFLINE DB: '+hit.name+' | '+f;
+}
+if(typeof LOCAL_DICT!=='undefined'){
+for(var i=0;i<LOCAL_DICT.length;i++){
+if(ql.indexOf(LOCAL_DICT[i][0])!==-1){
+return 'OFFLINE AI: '+LOCAL_DICT[i][1];
+}
+}
+}
+return 'OFFLINE AI: внешние каналы недоступны. '+
+'Спроси про спутник по имени или используй wiki.';
+}catch(e){
+return 'OFFLINE AI: словарь повреждён.';
+}
+}
+function aiAsk(q){
+try{
+log('AI THINKING (diag mode)...','info');
+var bodies={E:'Земля',M:'Луна',A:'Марс'};
+var ctx='Ты бортовой ИИ космического терминала '+
+'COSMO PLUS. Отвечай кратко, на русском. '+
+'Открыт глобус: '+bodies[curBody]+'. ';
+var prompt=ctx+q;
+function show(t){
+String(t).split(/\n+/).slice(0,6)
+.forEach(function(line){
+if(line) log('AI: '+line,'ok');
+});
+}
+var routes=[aiR1,aiR2,aiR3,aiR4,aiR5];
+var limits=[40000,40000,30000,30000,30000];
+function go(i){
+if(i>=routes.length){ show(aiLocal(q)); return; }
+aiTm(routes[i](prompt),limits[i]).then(show)
+.catch(function(){
+log('AI: route '+(i+1)+' down','info');
+go(i+1);
+});
+}
+go(0);
+}catch(e){
+log('AI ERR: '+e.message,'err');
+log(aiLocal(q),'ok');
+}
+}
+log('P15 AI DIAG OK','ok');
+</script>
+<script>
+function aiSentences(t,n){
+var m=String(t).replace(/\s+/g,' ')
+.match(/[^.!?]+[.!?]*/g);
+return (m||[t]).slice(0,n).join(' ').trim();
+}
+function aiWiki(q){
+var u='https://ru.wikipedia.org/w/api.php?'+
+'action=query&generator=search&gsrlimit=1'+
+'&prop=extracts&explaintext=1&exchars=1500'+
+'&format=json&origin=*&gsrsearch='+
+encodeURIComponent(q);
+return fetch(u).then(function(r){
+if(!r.ok) throw 0;
+return r.json();
+}).then(function(j){
+var p=j&&j.query&&j.query.pages;
+if(!p) throw 0;
+var pg=p[Object.keys(p)[0]];
+var ex=(pg.extract||'').trim();
+if(ex.length<40) throw 0;
+return aiSentences(ex,3);
+});
+}
+function aiAsk(q){
+try{
+log('AI THINKING...','info');
+var ql=q.toLowerCase();
+var sat=null;
+DB.forEach(function(s){
+if(sat) return;
+var nm=s.name.toLowerCase().split('-')[0];
+if(nm.length>3&&ql.indexOf(nm)!==-1) sat=s;
+});
+var done=false;
+function fin(t){
+if(done) return;
+done=true;
+String(t).split(/\n+/).slice(0,6)
+.forEach(function(l){
+if(l) log('AI: '+l,'ok');
+});
+}
+if(sat){
+var pos=getPos(sat,new Date());
+var line='AI: '+sat.name+'. ';
+if(pos&&isFinite(pos.lat)&&!pos.ds&&!pos.sf){
+line+='Сейчас: LAT '+pos.lat.toFixed(1)+
+', LON '+pos.lon.toFixed(1)+', высота '+
+pos.alt.toFixed(0)+' км. ';
+}else if(sat.sp){
+line+='Дальний космос, сигнал с задержкой. ';
+}else if(sat.surf){
+line+='Работает на поверхности тела. ';
+}
+var f=sat.fact||F[sat.id];
+if(f) line+=f.split('|').slice(0,4).join(', ')+'. ';
+fin(line);
+aiWiki(q).then(function(ex){
+log('AI: '+ex,'info');
+}).catch(function(){});
+return;
+}
+aiWiki(q).then(function(ex){
+fin(ex+' (источник: Википедия)');
+}).catch(function(){
+log('AI: wiki empty, trying net...','info');
+aiTm(fetch(aiUrl(q,'openai'))
+.then(aiRep).then(aiClean),20000)
+.then(function(t){ fin(t); })
+.catch(function(){ fin(aiLocal(q)); });
+});
+}catch(e){
+log('AI ERR: '+e.message,'err');
+}
+}
+log('P16 AI WIKI-ENGINE OK','ok');
+</script>
+</body>
+</html>
